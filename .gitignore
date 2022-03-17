@@ -230,3 +230,5 @@ typings/
 /tmp
 # Database file
 /data
+package-lock.json
+secretkey.txt

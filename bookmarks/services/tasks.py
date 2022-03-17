@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import waybackpy
 from background_task import background
@@ -11,22 +12,18 @@ from bookmarks.models import Bookmark
 logger = logging.getLogger(__name__)
 
 
-def when_background_tasks_enabled(fn):
-    def wrapper(*args, **kwargs):
-        if settings.LD_DISABLE_BACKGROUND_TASKS:
-            return
-        return fn(*args, **kwargs)
+def do_archive(bookmark: Bookmark, wayback):
+    try:
+        archive = wayback.save()
+    except WaybackError as error:
+        logger.exception(f'Error creating web archive link for bookmark: {bookmark}...', exc_info=error)
+        raise
 
-    # Expose attributes from wrapped TaskProxy function
-    attrs = vars(fn)
-    for key, value in attrs.items():
-        setattr(wrapper, key, value)
-
-    return wrapper
+    bookmark.web_archive_snapshot_url = archive.archive_url
+    bookmark.save()
+    logger.debug(f'Successfully created web archive link for bookmark: {bookmark}...')
 
 
-@when_background_tasks_enabled
-@background()
 def create_web_archive_snapshot(bookmark_id: int, force_update: bool):
     try:
         bookmark = Bookmark.objects.get(id=bookmark_id)
@@ -41,20 +38,15 @@ def create_web_archive_snapshot(bookmark_id: int, force_update: bool):
 
     wayback = waybackpy.Url(bookmark.url)
 
-    try:
-        archive = wayback.save()
-    except WaybackError as error:
-        logger.exception(f'Error creating web archive link for bookmark: {bookmark}...', exc_info=error)
-        raise
-
-    bookmark.web_archive_snapshot_url = archive.archive_url
-    bookmark.save()
-    logger.debug(f'Successfully created web archive link for bookmark: {bookmark}...')
+    threading.Thread(target=do_archive, args=(bookmark, wayback)).start()
 
 
-@when_background_tasks_enabled
-@background()
+
 def schedule_bookmarks_without_snapshots(user_id: int):
+    if not settings.LD_ENABLE_AUTO_WEBARCHIVE:
+        logger.debug("Not auto schedule_bookmarks_without_snapshots")
+        return
+    logger.debug("Auto schedule_bookmarks_without_snapshots")
     user = get_user_model().objects.get(id=user_id)
     bookmarks_without_snapshots = Bookmark.objects.filter(web_archive_snapshot_url__exact='', owner=user)
 

@@ -2,6 +2,7 @@ from typing import Union
 
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.conf import settings
 
 from bookmarks.models import Bookmark, parse_tag_string
 from bookmarks.services.tags import get_or_create_tags
@@ -29,7 +30,8 @@ def create_bookmark(bookmark: Bookmark, tag_string: str, current_user: User):
     _update_bookmark_tags(bookmark, tag_string, current_user)
     bookmark.save()
     # Create snapshot on web archive
-    tasks.create_web_archive_snapshot(bookmark.id, False)
+    if settings.LD_ENABLE_AUTO_WEBARCHIVE:
+        tasks.create_web_archive_snapshot(bookmark.id, False)
 
     return bookmark
 
@@ -46,7 +48,7 @@ def update_bookmark(bookmark: Bookmark, tag_string, current_user: User):
     bookmark.date_modified = timezone.now()
     bookmark.save()
     # Update web archive snapshot, if URL changed
-    if has_url_changed:
+    if settings.LD_ENABLE_AUTO_WEBARCHIVE and has_url_changed:
         tasks.create_web_archive_snapshot(bookmark.id, True)
 
     return bookmark
@@ -56,6 +58,7 @@ def archive_bookmark(bookmark: Bookmark):
     bookmark.is_archived = True
     bookmark.date_modified = timezone.now()
     bookmark.save()
+    tasks.create_web_archive_snapshot(bookmark.id, True)
     return bookmark
 
 

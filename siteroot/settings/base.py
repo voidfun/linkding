@@ -168,8 +168,8 @@ ALLOW_REGISTRATION = False
 # URL validation flag
 LD_DISABLE_URL_VALIDATION = os.getenv('LD_DISABLE_URL_VALIDATION', False) in (True, 'True', '1')
 
-# Background task enabled setting
-LD_DISABLE_BACKGROUND_TASKS = os.getenv('LD_DISABLE_BACKGROUND_TASKS', False) in (True, 'True', '1')
+# auto webarchive enabled setting
+LD_ENABLE_AUTO_WEBARCHIVE = os.getenv('LD_ENABLE_AUTO_WEBARCHIVE', False) in (True, 'True', '1')
 
 # django-background-tasks
 MAX_ATTEMPTS = 5
