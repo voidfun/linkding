@@ -18,8 +18,8 @@ class Concat(Aggregate):
 
 
 def query_bookmarks(user: User, query_string: str) -> QuerySet:
-    return _base_bookmarks_query(user, query_string) \
-        .filter(is_archived=False)
+    return _base_bookmarks_query(user, query_string) # \
+        # .filter(is_archived=False)
 
 
 def query_archived_bookmarks(user: User, query_string: str) -> QuerySet:
